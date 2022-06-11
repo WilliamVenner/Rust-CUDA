@@ -103,7 +103,7 @@ impl fmt::Display for CudaError {
                 }
             }
             // This shouldn't happen
-            _ => write!(f, "Unknown error"),
+            code => write!(f, "Unknown error ({})", code as i32),
         }
     }
 }
@@ -211,7 +211,11 @@ impl ToResult for cudaError_enum {
             cudaError_enum::CUDA_ERROR_LAUNCH_FAILED => Err(CudaError::LaunchFailed),
             cudaError_enum::CUDA_ERROR_NOT_PERMITTED => Err(CudaError::NotPermitted),
             cudaError_enum::CUDA_ERROR_NOT_SUPPORTED => Err(CudaError::NotSupported),
-            _ => Err(CudaError::UnknownError),
+            code => Err({
+                // This is just straight up undefined behaviour, but this entire type is already undefined behaviour!
+                // We also don't want to discard "unknown errors" that are actually just not added to the enum yet.
+                unsafe { core::mem::transmute::<Self, CudaError>(code) }
+            }),
         }
     }
 }
